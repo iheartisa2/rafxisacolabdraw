@@ -59,6 +59,15 @@
       max-width: 100%;
       max-height: 80vh;
       display: block;
+      cursor: crosshair;
+    }
+    
+    canvas.pan-mode {
+      cursor: grab;
+    }
+    
+    canvas.pan-mode:active {
+      cursor: grabbing;
     }
     
     .fullscreen canvas {
@@ -160,6 +169,10 @@
       color: white;
     }
     
+    button.pan-active {
+      background-color: #4a2a4a;
+    }
+    
     input[type="color"] {
       width: 28px;
       height: 28px;
@@ -245,6 +258,21 @@
       box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
     }
     
+    .pan-btn {
+      background-color: var(--accent-color);
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 36px;
+      height: 36px;
+      font-size: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+    }
+    
     .fullscreen-btn {
       position: fixed;
       bottom: 60px;
@@ -301,10 +329,6 @@
       .fullscreen-btn {
         display: none;
       }
-      
-      .zoom-controls {
-        display: none;
-      }
     }
     
     .watermark {
@@ -338,6 +362,7 @@
         <div class="tool-group">
           <button id="brushBtn" class="active">Brush</button>
           <button id="eraserBtn">Eraser</button>
+          <button id="panBtn">Pan</button>
         </div>
         
         <div class="tool-group">
@@ -380,6 +405,7 @@
     <div class="tool-group">
       <button id="brushBtnDesktop" class="active">Brush</button>
       <button id="eraserBtnDesktop">Eraser</button>
+      <button id="panBtnDesktop">Pan</button>
     </div>
     
     <div class="tool-group">
@@ -440,6 +466,8 @@
     let zoomOffsetY = 0;
     let isDragging = false;
     let lastX, lastY;
+    let isPanMode = false;
+    let currentStrokeId = null;
 
     const canvas = document.getElementById('drawingCanvas');
     const ctx = canvas.getContext('2d');
@@ -453,6 +481,8 @@
     const zoomInBtn = document.getElementById('zoomInBtn');
     const zoomOutBtn = document.getElementById('zoomOutBtn');
     const resetZoomBtn = document.getElementById('resetZoomBtn');
+    const panBtn = document.getElementById('panBtn');
+    const panBtnDesktop = document.getElementById('panBtnDesktop');
 
     // Set canvas background to white
     ctx.fillStyle = 'white';
@@ -544,9 +574,44 @@
       draw();
     });
 
-    // Panning
+    // Pan mode toggle
+    function togglePanMode(enable) {
+      isPanMode = enable;
+      if (isPanMode) {
+        canvas.classList.add('pan-mode');
+        panBtn.classList.add('pan-active');
+        panBtnDesktop.classList.add('pan-active');
+      } else {
+        canvas.classList.remove('pan-mode');
+        panBtn.classList.remove('pan-active');
+        panBtnDesktop.classList.remove('pan-active');
+      }
+    }
+
+    panBtn.addEventListener('click', () => togglePanMode(true));
+    panBtnDesktop.addEventListener('click', () => togglePanMode(true));
+
+    // Return to brush when clicking brush/eraser
+    document.getElementById('brushBtn').addEventListener('click', () => {
+      currentTool = 'brush';
+      togglePanMode(false);
+    });
+    document.getElementById('eraserBtn').addEventListener('click', () => {
+      currentTool = 'eraser';
+      togglePanMode(false);
+    });
+    document.getElementById('brushBtnDesktop').addEventListener('click', () => {
+      currentTool = 'brush';
+      togglePanMode(false);
+    });
+    document.getElementById('eraserBtnDesktop').addEventListener('click', () => {
+      currentTool = 'eraser';
+      togglePanMode(false);
+    });
+
+    // Panning functionality
     canvas.addEventListener('mousedown', (e) => {
-      if (e.button === 1 || (e.button === 0 && e.ctrlKey)) { // Middle click or Ctrl+Left click
+      if (isPanMode || e.button === 1) { // Middle click or pan mode
         isDragging = true;
         lastX = e.clientX;
         lastY = e.clientY;
@@ -555,7 +620,7 @@
     });
 
     canvas.addEventListener('mousemove', (e) => {
-      if (isDragging) {
+      if (isDragging && (isPanMode || e.buttons === 4)) { // Only pan in pan mode or with middle button
         const dx = e.clientX - lastX;
         const dy = e.clientY - lastY;
         lastX = e.clientX;
@@ -570,13 +635,47 @@
     });
 
     canvas.addEventListener('mouseup', (e) => {
-      if (e.button === 1 || (e.button === 0 && e.ctrlKey)) {
+      if (isDragging && (isPanMode || e.button === 1)) {
         isDragging = false;
         e.preventDefault();
       }
     });
 
     canvas.addEventListener('mouseleave', () => {
+      isDragging = false;
+    });
+
+    // Touch events for panning
+    let touchStartX, touchStartY;
+    canvas.addEventListener('touchstart', (e) => {
+      if (isPanMode && e.touches.length === 1) {
+        isDragging = true;
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+        e.preventDefault();
+      }
+    }, { passive: false });
+
+    canvas.addEventListener('touchmove', (e) => {
+      if (isDragging && isPanMode && e.touches.length === 1) {
+        const touchX = e.touches[0].clientX;
+        const touchY = e.touches[0].clientY;
+        
+        const dx = touchX - touchStartX;
+        const dy = touchY - touchStartY;
+        
+        zoomOffsetX += dx / zoomLevel;
+        zoomOffsetY += dy / zoomLevel;
+        
+        touchStartX = touchX;
+        touchStartY = touchY;
+        
+        draw();
+        e.preventDefault();
+      }
+    }, { passive: false });
+
+    canvas.addEventListener('touchend', () => {
       isDragging = false;
     });
 
@@ -669,19 +768,26 @@
       // Draw image if loaded
       if (imageLoaded && currentImageUrl) {
         const image = new Image();
+        image.onload = function() {
+          ctx.globalAlpha = 0.3;
+          ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+          ctx.globalAlpha = 1.0;
+          // Redraw strokes after image loads
+          redrawAllStrokes();
+        };
         image.src = currentImageUrl;
-        ctx.globalAlpha = 0.3;
-        ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
-        ctx.globalAlpha = 1.0;
+      } else {
+        redrawAllStrokes();
       }
-      
-      // Redraw all strokes
-      Object.values(strokes).forEach(stroke => {
-        renderStroke(stroke);
-      });
       
       // Restore the context state
       ctx.restore();
+    }
+
+    function redrawAllStrokes() {
+      Object.values(strokes).forEach(stroke => {
+        renderStroke(stroke);
+      });
     }
 
     function createLobby() {
@@ -846,9 +952,8 @@
       };
     }
 
-    let currentStrokeId = null;
-
     function startStroke(e) {
+      if (isPanMode) return;
       e.preventDefault();
       drawing = true;
       
@@ -880,8 +985,8 @@
     }
 
     function drawStroke(e) {
+      if (!drawing || !currentStrokeId || isPanMode) return;
       e.preventDefault();
-      if (!drawing || !currentStrokeId) return;
       
       const clientX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
       const clientY = e.type.includes('touch') ? e.touches[0].clientY : e.clientY;
@@ -909,23 +1014,30 @@
     }
 
     function renderStroke(stroke) {
+      if (!stroke.points || stroke.points.length === 0) return;
+      
       ctx.strokeStyle = stroke.color;
       ctx.lineWidth = stroke.size;
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
       ctx.beginPath();
       
-      const points = stroke.points;
-      if (points.length === 1) {
-        ctx.arc(points[0].x, points[0].y, stroke.size/2, 0, Math.PI * 2);
+      // Always start from first point
+      ctx.moveTo(stroke.points[0].x, stroke.points[0].y);
+      
+      // Draw continuous line through all points
+      for (let i = 1; i < stroke.points.length; i++) {
+        ctx.lineTo(stroke.points[i].x, stroke.points[i].y);
+      }
+      
+      ctx.stroke();
+      
+      // Draw a circle at the start point for better visibility
+      if (stroke.points.length === 1) {
+        ctx.beginPath();
+        ctx.arc(stroke.points[0].x, stroke.points[0].y, stroke.size/2, 0, Math.PI*2);
         ctx.fillStyle = stroke.color;
         ctx.fill();
-      } else {
-        ctx.moveTo(points[0].x, points[0].y);
-        for (let i = 1; i < points.length; i++) {
-          ctx.lineTo(points[i].x, points[i].y);
-        }
-        ctx.stroke();
       }
     }
 
@@ -935,6 +1047,7 @@
       document.getElementById('eraserBtn').classList.toggle('active', tool === 'eraser');
       document.getElementById('brushBtnDesktop').classList.toggle('active', tool === 'brush');
       document.getElementById('eraserBtnDesktop').classList.toggle('active', tool === 'eraser');
+      togglePanMode(false);
     }
 
     function updateBrushSizeDisplay(value) {
@@ -972,32 +1085,73 @@
 
     // Event listeners
     canvas.addEventListener('mousedown', (e) => {
-      if (e.button === 0 && !e.ctrlKey) { // Left click without Ctrl
+      if (isPanMode || e.button === 1) { // Pan mode or middle click
+        isDragging = true;
+        lastX = e.clientX;
+        lastY = e.clientY;
+        e.preventDefault();
+      } else if (e.button === 0) { // Left click
         startStroke(e);
       }
     });
     canvas.addEventListener('mouseup', endStroke);
     canvas.addEventListener('mouseout', endStroke);
-    canvas.addEventListener('mousemove', drawStroke);
+    canvas.addEventListener('mousemove', (e) => {
+      if (isDragging) {
+        const dx = e.clientX - lastX;
+        const dy = e.clientY - lastY;
+        lastX = e.clientX;
+        lastY = e.clientY;
+        
+        zoomOffsetX += dx / zoomLevel;
+        zoomOffsetY += dy / zoomLevel;
+        
+        draw();
+        e.preventDefault();
+      } else {
+        drawStroke(e);
+      }
+    });
     
     canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
     canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
     canvas.addEventListener('touchend', handleTouchEnd);
 
     function handleTouchStart(e) {
-      if (e.touches.length === 1) {
+      if (isPanMode && e.touches.length === 1) {
+        isDragging = true;
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+        e.preventDefault();
+      } else if (e.touches.length === 1) {
         startStroke(e);
       }
     }
 
     function handleTouchMove(e) {
-      if (e.touches.length === 1) {
+      if (isDragging && isPanMode && e.touches.length === 1) {
+        const touchX = e.touches[0].clientX;
+        const touchY = e.touches[0].clientY;
+        
+        const dx = touchX - touchStartX;
+        const dy = touchY - touchStartY;
+        
+        zoomOffsetX += dx / zoomLevel;
+        zoomOffsetY += dy / zoomLevel;
+        
+        touchStartX = touchX;
+        touchStartY = touchY;
+        
+        draw();
+        e.preventDefault();
+      } else if (e.touches.length === 1) {
         drawStroke(e);
       }
     }
 
     function handleTouchEnd(e) {
       if (e.touches.length === 0) {
+        isDragging = false;
         endStroke(e);
       }
     }
@@ -1052,6 +1206,10 @@
     document.getElementById('clearCanvas').addEventListener('click', clearCanvas);
     document.getElementById('clearCanvasDesktop').addEventListener('click', clearCanvas);
     document.getElementById('toggleFullscreen').addEventListener('click', toggleFullscreen);
+
+    // Initialize UI
+    updateBrushSizeDisplay(5);
+    togglePanMode(false);
   </script>
 </body>
 </html>
