@@ -50,6 +50,7 @@
       display: flex;
       justify-content: center;
       align-items: center;
+      touch-action: none;
     }
     
     canvas {
@@ -67,11 +68,11 @@
     
     .tool-panel {
       background-color: var(--panel-color);
-      padding: 10px;
+      padding: 8px;
       display: flex;
       flex-wrap: wrap;
       justify-content: center;
-      gap: 8px;
+      gap: 6px;
       border-top: 1px solid var(--border-color);
     }
     
@@ -88,9 +89,9 @@
       color: white;
       border: none;
       border-radius: 50%;
-      width: 40px;
-      height: 40px;
-      font-size: 20px;
+      width: 36px;
+      height: 36px;
+      font-size: 18px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -101,14 +102,16 @@
       display: none;
       position: absolute;
       right: 0;
-      top: 45px;
+      top: 42px;
       background-color: var(--panel-color);
       border: 1px solid var(--border-color);
       border-radius: 8px;
-      padding: 10px;
-      min-width: 200px;
+      padding: 8px;
+      min-width: 180px;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
       z-index: 101;
+      max-height: 80vh;
+      overflow-y: auto;
     }
     
     .mobile-menu-content.show {
@@ -117,21 +120,21 @@
     
     .close-menu-btn {
       position: absolute;
-      top: 5px;
-      right: 5px;
+      top: 4px;
+      right: 4px;
       background: none;
       border: none;
       color: var(--text-color);
-      font-size: 1.2rem;
+      font-size: 1.1rem;
       cursor: pointer;
-      padding: 5px;
+      padding: 4px;
     }
     
     .tool-group {
       display: flex;
       align-items: center;
-      gap: 8px;
-      padding: 5px 8px;
+      gap: 6px;
+      padding: 4px 6px;
       background-color: rgba(0, 0, 0, 0.2);
       border-radius: 6px;
     }
@@ -141,10 +144,11 @@
       color: var(--text-color);
       border: 1px solid var(--border-color);
       border-radius: 6px;
-      padding: 6px 12px;
+      padding: 5px 10px;
       cursor: pointer;
       transition: all 0.2s;
-      font-size: 0.9rem;
+      font-size: 0.8rem;
+      white-space: nowrap;
     }
     
     button:hover {
@@ -157,8 +161,8 @@
     }
     
     input[type="color"] {
-      width: 30px;
-      height: 30px;
+      width: 28px;
+      height: 28px;
       border: none;
       border-radius: 50%;
       cursor: pointer;
@@ -171,7 +175,7 @@
     }
     
     input[type="range"] {
-      width: 80px;
+      width: 70px;
       cursor: pointer;
     }
     
@@ -179,41 +183,66 @@
       background-color: var(--panel-color);
       border: 1px solid var(--border-color);
       border-radius: 6px;
-      padding: 6px 10px;
+      padding: 5px 8px;
       color: var(--text-color);
-      min-width: 120px;
-      font-size: 0.9rem;
+      min-width: 100px;
+      font-size: 0.8rem;
     }
     
     .lobby-controls {
       display: flex;
-      gap: 8px;
-      margin-bottom: 10px;
+      gap: 6px;
+      margin-bottom: 8px;
       flex-wrap: wrap;
       justify-content: center;
-      padding: 0 10px;
+      padding: 0 8px;
     }
     
     .room-info {
       position: fixed;
-      top: 10px;
-      left: 10px;
+      top: 8px;
+      left: 8px;
       background-color: rgba(255, 102, 178, 0.3);
-      padding: 6px 10px;
+      padding: 5px 8px;
       border-radius: 6px;
-      font-size: 0.8rem;
+      font-size: 0.7rem;
       z-index: 10;
       display: none;
     }
     
     .status {
-      margin: 5px 10px;
-      padding: 6px 10px;
+      margin: 4px 8px;
+      padding: 5px 8px;
       border-radius: 6px;
       background-color: rgba(255, 102, 178, 0.2);
-      font-size: 0.8rem;
+      font-size: 0.7rem;
       display: none;
       text-align: center;
+    }
+    
+    .zoom-controls {
+      position: fixed;
+      bottom: 60px;
+      left: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      z-index: 50;
+    }
+    
+    .zoom-btn {
+      background-color: var(--accent-color);
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 36px;
+      height: 36px;
+      font-size: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
     }
     
     .fullscreen-btn {
@@ -224,9 +253,9 @@
       color: white;
       border: none;
       border-radius: 50%;
-      width: 40px;
-      height: 40px;
-      font-size: 20px;
+      width: 36px;
+      height: 36px;
+      font-size: 18px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -259,12 +288,12 @@
       }
       
       .mobile-menu-content .tool-group {
-        margin-bottom: 8px;
+        margin-bottom: 6px;
       }
       
       h1 {
         font-size: 1.2rem;
-        padding: 0 10px;
+        padding: 0 8px;
       }
     }
     
@@ -272,21 +301,25 @@
       .fullscreen-btn {
         display: none;
       }
+      
+      .zoom-controls {
+        display: none;
+      }
     }
     
     .watermark {
       position: fixed;
-      bottom: 10px;
-      left: 10px;
+      bottom: 8px;
+      left: 8px;
       color: var(--pink-light);
-      font-size: 0.8rem;
+      font-size: 0.7rem;
       opacity: 0.7;
       z-index: 10;
     }
   </style>
 </head>
 <body>
-  <h1>🎨 RafXisa4Ever Collaborative Drawing</h1>
+  <h1>🎨 RafXisa4Ever Drawing</h1>
   
   <div class="room-info" id="roomInfo"></div>
   
@@ -335,6 +368,12 @@
   
   <div class="canvas-container" id="canvasContainer">
     <canvas id="drawingCanvas" width="800" height="600"></canvas>
+  </div>
+  
+  <div class="zoom-controls">
+    <button class="zoom-btn" id="zoomInBtn">+</button>
+    <button class="zoom-btn" id="zoomOutBtn">-</button>
+    <button class="zoom-btn" id="resetZoomBtn">⟲</button>
   </div>
   
   <div class="tool-panel" id="desktopToolPanel">
@@ -388,7 +427,7 @@
 
     let currentTool = 'brush';
     let drawing = false;
-    let strokes = [];
+    let strokes = {};
     let lobbyCode = null;
     let lobbyRef = null;
     let isHost = false;
@@ -396,6 +435,11 @@
     let strokeListeners = [];
     let currentImageUrl = null;
     let imageLoaded = false;
+    let zoomLevel = 1;
+    let zoomOffsetX = 0;
+    let zoomOffsetY = 0;
+    let isDragging = false;
+    let lastX, lastY;
 
     const canvas = document.getElementById('drawingCanvas');
     const ctx = canvas.getContext('2d');
@@ -406,6 +450,9 @@
     const mobileMenu = document.getElementById('mobileMenu');
     const fullscreenBtn = document.getElementById('fullscreenBtn');
     const closeMenuBtn = document.querySelector('.close-menu-btn');
+    const zoomInBtn = document.getElementById('zoomInBtn');
+    const zoomOutBtn = document.getElementById('zoomOutBtn');
+    const resetZoomBtn = document.getElementById('resetZoomBtn');
 
     // Set canvas background to white
     ctx.fillStyle = 'white';
@@ -475,6 +522,64 @@
       }
     });
 
+    // Zoom controls
+    zoomInBtn.addEventListener('click', () => {
+      zoomLevel = Math.min(zoomLevel * 1.2, 4);
+      draw();
+    });
+
+    zoomOutBtn.addEventListener('click', () => {
+      zoomLevel = Math.max(zoomLevel / 1.2, 1);
+      if (zoomLevel === 1) {
+        zoomOffsetX = 0;
+        zoomOffsetY = 0;
+      }
+      draw();
+    });
+
+    resetZoomBtn.addEventListener('click', () => {
+      zoomLevel = 1;
+      zoomOffsetX = 0;
+      zoomOffsetY = 0;
+      draw();
+    });
+
+    // Panning
+    canvas.addEventListener('mousedown', (e) => {
+      if (e.button === 1 || (e.button === 0 && e.ctrlKey)) { // Middle click or Ctrl+Left click
+        isDragging = true;
+        lastX = e.clientX;
+        lastY = e.clientY;
+        e.preventDefault();
+      }
+    });
+
+    canvas.addEventListener('mousemove', (e) => {
+      if (isDragging) {
+        const dx = e.clientX - lastX;
+        const dy = e.clientY - lastY;
+        lastX = e.clientX;
+        lastY = e.clientY;
+        
+        zoomOffsetX += dx / zoomLevel;
+        zoomOffsetY += dy / zoomLevel;
+        
+        draw();
+        e.preventDefault();
+      }
+    });
+
+    canvas.addEventListener('mouseup', (e) => {
+      if (e.button === 1 || (e.button === 0 && e.ctrlKey)) {
+        isDragging = false;
+        e.preventDefault();
+      }
+    });
+
+    canvas.addEventListener('mouseleave', () => {
+      isDragging = false;
+    });
+
     function updateStatus(message, isError = false) {
       statusElement.textContent = message;
       statusElement.style.display = 'block';
@@ -521,7 +626,9 @@
       // Save image URL to Firebase if in a room
       if (lobbyCode) {
         const imageRef = ref(db, `lobbies/${lobbyCode}/image`);
-        set(imageRef, { url: currentImageUrl }).catch(error => {
+        set(imageRef, { url: currentImageUrl }).then(() => {
+          updateStatus('Image shared with room');
+        }).catch(error => {
           updateStatus('Error sharing image: ' + error.message, true);
         });
       }
@@ -536,19 +643,28 @@
       // Remove image from Firebase if in a room
       if (lobbyCode) {
         const imageRef = ref(db, `lobbies/${lobbyCode}/image`);
-        remove(imageRef).catch(error => {
+        remove(imageRef).then(() => {
+          updateStatus('Image removed for all users');
+        }).catch(error => {
           updateStatus('Error removing image: ' + error.message, true);
         });
       }
       
       draw();
-      updateStatus('Image removed');
     }
 
     function draw() {
+      // Save the current context state
+      ctx.save();
+      
       // Clear canvas
       ctx.fillStyle = 'white';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
+      
+      // Apply zoom and pan transformations
+      ctx.translate(canvas.width/2, canvas.height/2);
+      ctx.scale(zoomLevel, zoomLevel);
+      ctx.translate(-canvas.width/2 + zoomOffsetX, -canvas.height/2 + zoomOffsetY);
       
       // Draw image if loaded
       if (imageLoaded && currentImageUrl) {
@@ -560,9 +676,12 @@
       }
       
       // Redraw all strokes
-      strokes.forEach(stroke => {
+      Object.values(strokes).forEach(stroke => {
         renderStroke(stroke);
       });
+      
+      // Restore the context state
+      ctx.restore();
     }
 
     function createLobby() {
@@ -607,7 +726,7 @@
           mobileMenu.classList.remove('show');
           
           // Clear current data
-          strokes = [];
+          strokes = {};
           ctx.fillStyle = 'white';
           ctx.fillRect(0, 0, canvas.width, canvas.height);
           
@@ -617,17 +736,21 @@
             if (snapshot.exists()) {
               currentImageUrl = snapshot.val().url;
               loadImage(currentImageUrl);
+            } else {
+              imageLoaded = false;
+              currentImageUrl = null;
+              draw();
             }
           });
           
           // Load existing strokes
           const strokesRef = ref(db, `lobbies/${lobbyCode}/strokes`);
           onValue(strokesRef, (snapshot) => {
+            strokes = {};
             snapshot.forEach((childSnapshot) => {
-              const stroke = childSnapshot.val();
-              strokes.push(stroke);
-              renderStroke(stroke);
+              strokes[childSnapshot.key] = childSnapshot.val();
             });
+            draw();
           });
           
           listenForStrokes();
@@ -663,13 +786,8 @@
       const strokesRef = ref(db, `lobbies/${lobbyCode}/strokes`);
       const listener = onChildAdded(strokesRef, (data) => {
         const stroke = data.val();
-        
-        if (!strokes.some(s => s.points[0].x === stroke.points[0].x && 
-                               s.points[0].y === stroke.points[0].y &&
-                               s.points.length === stroke.points.length)) {
-          strokes.push(stroke);
-          renderStroke(stroke);
-        }
+        strokes[data.key] = stroke;
+        draw();
       });
       strokeListeners.push(() => listener());
     }
@@ -678,7 +796,7 @@
       const strokesRef = ref(db, `lobbies/${lobbyCode}/strokes`);
       const listener = onValue(strokesRef, (snapshot) => {
         if (!snapshot.exists() || snapshot.numChildren() === 0) {
-          strokes = [];
+          strokes = {};
           ctx.fillStyle = 'white';
           ctx.fillRect(0, 0, canvas.width, canvas.height);
           if (imageLoaded && currentImageUrl) {
@@ -720,6 +838,16 @@
       };
     }
 
+    function getTransformedPosition(x, y) {
+      // Transform coordinates based on current zoom and pan
+      return {
+        x: (x - canvas.width/2) / zoomLevel + canvas.width/2 - zoomOffsetX,
+        y: (y - canvas.height/2) / zoomLevel + canvas.height/2 - zoomOffsetY
+      };
+    }
+
+    let currentStrokeId = null;
+
     function startStroke(e) {
       e.preventDefault();
       drawing = true;
@@ -727,53 +855,57 @@
       const clientX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
       const clientY = e.type.includes('touch') ? e.touches[0].clientY : e.clientY;
       const pos = getCanvasPosition(clientX, clientY);
+      const transformedPos = getTransformedPosition(pos.x, pos.y);
       
-      strokes.push({
+      currentStrokeId = Date.now().toString(36) + Math.random().toString(36).substring(2);
+      
+      const stroke = {
         tool: currentTool,
         color: currentTool === 'eraser' ? 'white' : document.getElementById('colorPicker').value || document.getElementById('colorPickerDesktop').value,
         size: document.getElementById('brushSize').value || document.getElementById('brushSizeDesktop').value,
-        points: [{ x: pos.x, y: pos.y }]
-      });
+        points: [{ x: transformedPos.x, y: transformedPos.y }],
+        userId: isHost ? 'host' : 'guest' // Add user identifier
+      };
+      
+      strokes[currentStrokeId] = stroke;
+      
+      if (lobbyCode) {
+        const strokesRef = ref(db, `lobbies/${lobbyCode}/strokes/${currentStrokeId}`);
+        set(strokesRef, stroke).catch(error => {
+          updateStatus('Error sending stroke: ' + error.message, true);
+        });
+      }
+      
+      draw();
     }
 
     function drawStroke(e) {
       e.preventDefault();
-      if (!drawing) return;
+      if (!drawing || !currentStrokeId) return;
       
       const clientX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
       const clientY = e.type.includes('touch') ? e.touches[0].clientY : e.clientY;
       const pos = getCanvasPosition(clientX, clientY);
+      const transformedPos = getTransformedPosition(pos.x, pos.y);
       
-      const stroke = strokes[strokes.length - 1];
-      stroke.points.push({ x: pos.x, y: pos.y });
+      const stroke = strokes[currentStrokeId];
+      stroke.points.push({ x: transformedPos.x, y: transformedPos.y });
       
-      ctx.strokeStyle = stroke.color;
-      ctx.lineWidth = stroke.size;
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
-      ctx.beginPath();
-      const points = stroke.points;
-      ctx.moveTo(points[points.length - 2].x, points[points.length - 2].y);
-      ctx.lineTo(points[points.length - 1].x, points[points.length - 1].y);
-      ctx.stroke();
+      if (lobbyCode) {
+        const strokesRef = ref(db, `lobbies/${lobbyCode}/strokes/${currentStrokeId}`);
+        set(strokesRef, stroke).catch(error => {
+          updateStatus('Error sending stroke: ' + error.message, true);
+        });
+      }
+      
+      draw();
     }
 
     function endStroke(e) {
-      if (!drawing) return;
+      if (!drawing || !currentStrokeId) return;
       e.preventDefault();
       drawing = false;
-      
-      if (lobbyCode && strokes.length > 0) {
-        sendStrokeToFirebase(strokes[strokes.length - 1]);
-      }
-    }
-
-    function sendStrokeToFirebase(stroke) {
-      const strokesRef = ref(db, `lobbies/${lobbyCode}/strokes`);
-      const newStrokeRef = push(strokesRef);
-      set(newStrokeRef, stroke).catch(error => {
-        updateStatus('Error sending stroke: ' + error.message, true);
-      });
+      currentStrokeId = null;
     }
 
     function renderStroke(stroke) {
@@ -815,7 +947,7 @@
         if (isHost || confirm('Are you sure you want to clear the canvas? This will affect all users.')) {
           const strokesRef = ref(db, `lobbies/${lobbyCode}/strokes`);
           set(strokesRef, {}).then(() => {
-            strokes = [];
+            strokes = {};
             ctx.fillStyle = 'white';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             if (imageLoaded && currentImageUrl) {
@@ -832,14 +964,18 @@
         }
       } else {
         if (confirm('Clear your local canvas?')) {
-          strokes = [];
+          strokes = {};
           draw();
         }
       }
     }
 
     // Event listeners
-    canvas.addEventListener('mousedown', startStroke);
+    canvas.addEventListener('mousedown', (e) => {
+      if (e.button === 0 && !e.ctrlKey) { // Left click without Ctrl
+        startStroke(e);
+      }
+    });
     canvas.addEventListener('mouseup', endStroke);
     canvas.addEventListener('mouseout', endStroke);
     canvas.addEventListener('mousemove', drawStroke);
