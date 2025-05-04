@@ -115,6 +115,18 @@
       display: block;
     }
     
+    .close-menu-btn {
+      position: absolute;
+      top: 5px;
+      right: 5px;
+      background: none;
+      border: none;
+      color: var(--text-color);
+      font-size: 1.2rem;
+      cursor: pointer;
+      padding: 5px;
+    }
+    
     .tool-group {
       display: flex;
       align-items: center;
@@ -262,7 +274,6 @@
       }
     }
     
-    /* RafXisa4Ever watermark */
     .watermark {
       position: fixed;
       bottom: 10px;
@@ -282,6 +293,7 @@
   <div class="mobile-menu">
     <button class="mobile-menu-btn">⋮</button>
     <div class="mobile-menu-content" id="mobileMenu">
+      <button class="close-menu-btn">&times;</button>
       <div class="lobby-controls">
         <button id="createLobby">Create Room</button>
         <input type="text" id="lobbyCode" placeholder="Room Code">
@@ -391,6 +403,7 @@
     const mobileMenuBtn = document.querySelector('.mobile-menu-btn');
     const mobileMenu = document.getElementById('mobileMenu');
     const fullscreenBtn = document.getElementById('fullscreenBtn');
+    const closeMenuBtn = document.querySelector('.close-menu-btn');
 
     // Set canvas background to white
     ctx.fillStyle = 'white';
@@ -416,12 +429,20 @@
     // Mobile menu toggle
     mobileMenuBtn.addEventListener('click', (e) => {
       e.stopPropagation();
-      mobileMenu.classList.toggle('show');
+      mobileMenu.classList.add('show');
     });
 
-    // Close mobile menu when clicking outside
-    document.addEventListener('click', () => {
+    // Close menu button
+    closeMenuBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
       mobileMenu.classList.remove('show');
+    });
+
+    // Close menu when clicking outside
+    document.addEventListener('click', (e) => {
+      if (!mobileMenu.contains(e.target) && e.target !== mobileMenuBtn) {
+        mobileMenu.classList.remove('show');
+      }
     });
 
     // Fullscreen toggle
@@ -473,17 +494,14 @@
     }
 
     function draw() {
-      // Clear canvas
       ctx.fillStyle = 'white';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       
-      // Redraw all strokes
       strokes.forEach(stroke => {
         renderStroke(stroke);
       });
     }
 
-    // Image functions
     function addImage() {
       const url = document.getElementById('imageURL').value || document.getElementById('imageURLDesktop').value;
       if (!url) {
@@ -510,7 +528,6 @@
       updateStatus('Image removed');
     }
 
-    // Room functions
     function createLobby() {
       lobbyCode = Math.random().toString(36).substring(2, 8).toUpperCase();
       isHost = true;
@@ -527,6 +544,7 @@
         updateRoomInfo();
         listenForStrokes();
         listenForClears();
+        mobileMenu.classList.remove('show');
       }).catch(error => {
         updateStatus('Error creating room: ' + error.message, true);
       });
@@ -548,13 +566,12 @@
           lobbyRef = checkRef;
           updateStatus(`Joined room: ${lobbyCode}`);
           updateRoomInfo();
+          mobileMenu.classList.remove('show');
           
-          // Clear current strokes
           strokes = [];
           ctx.fillStyle = 'white';
           ctx.fillRect(0, 0, canvas.width, canvas.height);
           
-          // Load existing strokes
           const strokesRef = ref(db, `lobbies/${lobbyCode}/strokes`);
           onValue(strokesRef, (snapshot) => {
             snapshot.forEach((childSnapshot) => {
@@ -578,7 +595,6 @@
     function leaveLobby() {
       if (!lobbyCode) return;
       
-      // Remove all listeners
       strokeListeners.forEach(unsubscribe => unsubscribe());
       strokeListeners = [];
       
@@ -587,9 +603,9 @@
       isHost = false;
       updateStatus('Left the room');
       updateRoomInfo();
+      mobileMenu.classList.remove('show');
     }
 
-    // Drawing functions
     function getCanvasPosition(clientX, clientY) {
       const rect = canvas.getBoundingClientRect();
       const scaleX = canvas.width / rect.width;
@@ -648,7 +664,6 @@
       }
     }
 
-    // Touch event handlers
     function handleTouchStart(e) {
       if (e.touches.length === 1) {
         startStroke(e);
@@ -667,7 +682,6 @@
       }
     }
 
-    // Tool buttons
     function setTool(tool) {
       currentTool = tool;
       document.getElementById('brushBtn').classList.toggle('active', tool === 'brush');
@@ -676,13 +690,11 @@
       document.getElementById('eraserBtnDesktop').classList.toggle('active', tool === 'eraser');
     }
 
-    // Brush size display
     function updateBrushSizeDisplay(value) {
       document.getElementById('brushSizeValue').textContent = `${value}px`;
       document.getElementById('brushSizeValueDesktop').textContent = `${value}px`;
     }
 
-    // Clear canvas
     function clearCanvas() {
       if (lobbyCode) {
         if (isHost || confirm('Are you sure you want to clear the canvas? This will affect all users.')) {
@@ -704,7 +716,6 @@
       }
     }
 
-    // Firebase functions
     function sendStrokeToFirebase(stroke) {
       const strokesRef = ref(db, `lobbies/${lobbyCode}/strokes`);
       const newStrokeRef = push(strokesRef);
@@ -767,18 +778,15 @@
     canvas.addEventListener('mouseout', endStroke);
     canvas.addEventListener('mousemove', drawStroke);
     
-    // Touch support
     canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
     canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
     canvas.addEventListener('touchend', handleTouchEnd);
 
-    // Tool buttons
     document.getElementById('brushBtn').addEventListener('click', () => setTool('brush'));
     document.getElementById('eraserBtn').addEventListener('click', () => setTool('eraser'));
     document.getElementById('brushBtnDesktop').addEventListener('click', () => setTool('brush'));
     document.getElementById('eraserBtnDesktop').addEventListener('click', () => setTool('eraser'));
 
-    // Brush size
     const brushSizeInput = document.getElementById('brushSize');
     const brushSizeDesktopInput = document.getElementById('brushSizeDesktop');
     brushSizeInput.addEventListener('input', (e) => {
@@ -790,7 +798,6 @@
       updateBrushSizeDisplay(e.target.value);
     });
 
-    // Color picker sync
     const colorPicker = document.getElementById('colorPicker');
     const colorPickerDesktop = document.getElementById('colorPickerDesktop');
     colorPicker.addEventListener('input', (e) => {
@@ -800,7 +807,6 @@
       colorPicker.value = e.target.value;
     });
 
-    // Image URL sync
     const imageURL = document.getElementById('imageURL');
     const imageURLDesktop = document.getElementById('imageURLDesktop');
     imageURL.addEventListener('input', (e) => {
@@ -810,7 +816,6 @@
       imageURL.value = e.target.value;
     });
 
-    // Button actions
     document.getElementById('createLobby').addEventListener('click', createLobby);
     document.getElementById('joinLobby').addEventListener('click', joinLobby);
     document.getElementById('leaveLobby').addEventListener('click', leaveLobby);
