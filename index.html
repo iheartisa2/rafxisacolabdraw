@@ -394,6 +394,8 @@
     let isHost = false;
     let isFullscreen = false;
     let strokeListeners = [];
+    let currentImageUrl = null;
+    let imageLoaded = false;
 
     const canvas = document.getElementById('drawingCanvas');
     const ctx = canvas.getContext('2d');
@@ -493,13 +495,18 @@
       }
     }
 
-    function draw() {
-      ctx.fillStyle = 'white';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      
-      strokes.forEach(stroke => {
-        renderStroke(stroke);
-      });
+    function loadImage(url) {
+      const image = new Image();
+      image.crossOrigin = 'Anonymous';
+      image.src = url;
+      image.onload = () => {
+        imageLoaded = true;
+        draw();
+        updateStatus('Image loaded');
+      };
+      image.onerror = () => {
+        updateStatus('Failed to load image', true);
+      };
     }
 
     function addImage() {
@@ -509,23 +516,53 @@
         return;
       }
       
-      const image = new Image();
-      image.crossOrigin = 'Anonymous';
-      image.src = url;
-      image.onload = () => {
-        ctx.globalAlpha = 0.3;
-        ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
-        ctx.globalAlpha = 1.0;
-        updateStatus('Image loaded');
-      };
-      image.onerror = () => {
-        updateStatus('Failed to load image', true);
-      };
+      currentImageUrl = url;
+      
+      // Save image URL to Firebase if in a room
+      if (lobbyCode) {
+        const imageRef = ref(db, `lobbies/${lobbyCode}/image`);
+        set(imageRef, { url: currentImageUrl }).catch(error => {
+          updateStatus('Error sharing image: ' + error.message, true);
+        });
+      }
+      
+      loadImage(currentImageUrl);
     }
 
     function removeImage() {
+      imageLoaded = false;
+      currentImageUrl = null;
+      
+      // Remove image from Firebase if in a room
+      if (lobbyCode) {
+        const imageRef = ref(db, `lobbies/${lobbyCode}/image`);
+        remove(imageRef).catch(error => {
+          updateStatus('Error removing image: ' + error.message, true);
+        });
+      }
+      
       draw();
       updateStatus('Image removed');
+    }
+
+    function draw() {
+      // Clear canvas
+      ctx.fillStyle = 'white';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      
+      // Draw image if loaded
+      if (imageLoaded && currentImageUrl) {
+        const image = new Image();
+        image.src = currentImageUrl;
+        ctx.globalAlpha = 0.3;
+        ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+        ctx.globalAlpha = 1.0;
+      }
+      
+      // Redraw all strokes
+      strokes.forEach(stroke => {
+        renderStroke(stroke);
+      });
     }
 
     function createLobby() {
@@ -544,6 +581,7 @@
         updateRoomInfo();
         listenForStrokes();
         listenForClears();
+        listenForImageChanges();
         mobileMenu.classList.remove('show');
       }).catch(error => {
         updateStatus('Error creating room: ' + error.message, true);
@@ -568,10 +606,21 @@
           updateRoomInfo();
           mobileMenu.classList.remove('show');
           
+          // Clear current data
           strokes = [];
           ctx.fillStyle = 'white';
           ctx.fillRect(0, 0, canvas.width, canvas.height);
           
+          // Load existing image
+          const imageRef = ref(db, `lobbies/${lobbyCode}/image`);
+          onValue(imageRef, (snapshot) => {
+            if (snapshot.exists()) {
+              currentImageUrl = snapshot.val().url;
+              loadImage(currentImageUrl);
+            }
+          });
+          
+          // Load existing strokes
           const strokesRef = ref(db, `lobbies/${lobbyCode}/strokes`);
           onValue(strokesRef, (snapshot) => {
             snapshot.forEach((childSnapshot) => {
@@ -583,6 +632,7 @@
           
           listenForStrokes();
           listenForClears();
+          listenForImageChanges();
         } else {
           updateStatus('Room not found', true);
           lobbyCode = null;
@@ -601,9 +651,63 @@
       lobbyCode = null;
       lobbyRef = null;
       isHost = false;
+      currentImageUrl = null;
+      imageLoaded = false;
       updateStatus('Left the room');
       updateRoomInfo();
       mobileMenu.classList.remove('show');
+      draw();
+    }
+
+    function listenForStrokes() {
+      const strokesRef = ref(db, `lobbies/${lobbyCode}/strokes`);
+      const listener = onChildAdded(strokesRef, (data) => {
+        const stroke = data.val();
+        
+        if (!strokes.some(s => s.points[0].x === stroke.points[0].x && 
+                               s.points[0].y === stroke.points[0].y &&
+                               s.points.length === stroke.points.length)) {
+          strokes.push(stroke);
+          renderStroke(stroke);
+        }
+      });
+      strokeListeners.push(() => listener());
+    }
+
+    function listenForClears() {
+      const strokesRef = ref(db, `lobbies/${lobbyCode}/strokes`);
+      const listener = onValue(strokesRef, (snapshot) => {
+        if (!snapshot.exists() || snapshot.numChildren() === 0) {
+          strokes = [];
+          ctx.fillStyle = 'white';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          if (imageLoaded && currentImageUrl) {
+            const image = new Image();
+            image.src = currentImageUrl;
+            ctx.globalAlpha = 0.3;
+            ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+            ctx.globalAlpha = 1.0;
+          }
+        }
+      });
+      strokeListeners.push(() => listener());
+    }
+
+    function listenForImageChanges() {
+      if (!lobbyCode) return;
+      
+      const imageRef = ref(db, `lobbies/${lobbyCode}/image`);
+      const listener = onValue(imageRef, (snapshot) => {
+        if (snapshot.exists()) {
+          currentImageUrl = snapshot.val().url;
+          loadImage(currentImageUrl);
+        } else {
+          imageLoaded = false;
+          currentImageUrl = null;
+          draw();
+        }
+      });
+      strokeListeners.push(() => listener());
     }
 
     function getCanvasPosition(clientX, clientY) {
@@ -664,21 +768,32 @@
       }
     }
 
-    function handleTouchStart(e) {
-      if (e.touches.length === 1) {
-        startStroke(e);
-      }
+    function sendStrokeToFirebase(stroke) {
+      const strokesRef = ref(db, `lobbies/${lobbyCode}/strokes`);
+      const newStrokeRef = push(strokesRef);
+      set(newStrokeRef, stroke).catch(error => {
+        updateStatus('Error sending stroke: ' + error.message, true);
+      });
     }
 
-    function handleTouchMove(e) {
-      if (e.touches.length === 1) {
-        drawStroke(e);
-      }
-    }
-
-    function handleTouchEnd(e) {
-      if (e.touches.length === 0) {
-        endStroke(e);
+    function renderStroke(stroke) {
+      ctx.strokeStyle = stroke.color;
+      ctx.lineWidth = stroke.size;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.beginPath();
+      
+      const points = stroke.points;
+      if (points.length === 1) {
+        ctx.arc(points[0].x, points[0].y, stroke.size/2, 0, Math.PI * 2);
+        ctx.fillStyle = stroke.color;
+        ctx.fill();
+      } else {
+        ctx.moveTo(points[0].x, points[0].y);
+        for (let i = 1; i < points.length; i++) {
+          ctx.lineTo(points[i].x, points[i].y);
+        }
+        ctx.stroke();
       }
     }
 
@@ -703,6 +818,13 @@
             strokes = [];
             ctx.fillStyle = 'white';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
+            if (imageLoaded && currentImageUrl) {
+              const image = new Image();
+              image.src = currentImageUrl;
+              ctx.globalAlpha = 0.3;
+              ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+              ctx.globalAlpha = 1.0;
+            }
             updateStatus('Canvas cleared');
           }).catch(error => {
             updateStatus('Error clearing canvas: ' + error.message, true);
@@ -716,62 +838,6 @@
       }
     }
 
-    function sendStrokeToFirebase(stroke) {
-      const strokesRef = ref(db, `lobbies/${lobbyCode}/strokes`);
-      const newStrokeRef = push(strokesRef);
-      set(newStrokeRef, stroke).catch(error => {
-        updateStatus('Error sending stroke: ' + error.message, true);
-      });
-    }
-
-    function listenForStrokes() {
-      const strokesRef = ref(db, `lobbies/${lobbyCode}/strokes`);
-      const listener = onChildAdded(strokesRef, (data) => {
-        const stroke = data.val();
-        
-        if (!strokes.some(s => s.points[0].x === stroke.points[0].x && 
-                               s.points[0].y === stroke.points[0].y &&
-                               s.points.length === stroke.points.length)) {
-          strokes.push(stroke);
-          renderStroke(stroke);
-        }
-      });
-      strokeListeners.push(() => listener());
-    }
-
-    function listenForClears() {
-      const strokesRef = ref(db, `lobbies/${lobbyCode}/strokes`);
-      const listener = onValue(strokesRef, (snapshot) => {
-        if (!snapshot.exists() || snapshot.numChildren() === 0) {
-          strokes = [];
-          ctx.fillStyle = 'white';
-          ctx.fillRect(0, 0, canvas.width, canvas.height);
-        }
-      });
-      strokeListeners.push(() => listener());
-    }
-
-    function renderStroke(stroke) {
-      ctx.strokeStyle = stroke.color;
-      ctx.lineWidth = stroke.size;
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
-      ctx.beginPath();
-      
-      const points = stroke.points;
-      if (points.length === 1) {
-        ctx.arc(points[0].x, points[0].y, stroke.size/2, 0, Math.PI * 2);
-        ctx.fillStyle = stroke.color;
-        ctx.fill();
-      } else {
-        ctx.moveTo(points[0].x, points[0].y);
-        for (let i = 1; i < points.length; i++) {
-          ctx.lineTo(points[i].x, points[i].y);
-        }
-        ctx.stroke();
-      }
-    }
-
     // Event listeners
     canvas.addEventListener('mousedown', startStroke);
     canvas.addEventListener('mouseup', endStroke);
@@ -782,11 +848,31 @@
     canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
     canvas.addEventListener('touchend', handleTouchEnd);
 
+    function handleTouchStart(e) {
+      if (e.touches.length === 1) {
+        startStroke(e);
+      }
+    }
+
+    function handleTouchMove(e) {
+      if (e.touches.length === 1) {
+        drawStroke(e);
+      }
+    }
+
+    function handleTouchEnd(e) {
+      if (e.touches.length === 0) {
+        endStroke(e);
+      }
+    }
+
+    // Tool buttons
     document.getElementById('brushBtn').addEventListener('click', () => setTool('brush'));
     document.getElementById('eraserBtn').addEventListener('click', () => setTool('eraser'));
     document.getElementById('brushBtnDesktop').addEventListener('click', () => setTool('brush'));
     document.getElementById('eraserBtnDesktop').addEventListener('click', () => setTool('eraser'));
 
+    // Brush size
     const brushSizeInput = document.getElementById('brushSize');
     const brushSizeDesktopInput = document.getElementById('brushSizeDesktop');
     brushSizeInput.addEventListener('input', (e) => {
@@ -798,6 +884,7 @@
       updateBrushSizeDisplay(e.target.value);
     });
 
+    // Color picker sync
     const colorPicker = document.getElementById('colorPicker');
     const colorPickerDesktop = document.getElementById('colorPickerDesktop');
     colorPicker.addEventListener('input', (e) => {
@@ -807,6 +894,7 @@
       colorPicker.value = e.target.value;
     });
 
+    // Image URL sync
     const imageURL = document.getElementById('imageURL');
     const imageURLDesktop = document.getElementById('imageURLDesktop');
     imageURL.addEventListener('input', (e) => {
@@ -816,6 +904,7 @@
       imageURL.value = e.target.value;
     });
 
+    // Button actions
     document.getElementById('createLobby').addEventListener('click', createLobby);
     document.getElementById('joinLobby').addEventListener('click', joinLobby);
     document.getElementById('leaveLobby').addEventListener('click', leaveLobby);
